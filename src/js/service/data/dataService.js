@@ -178,7 +178,19 @@ dataService.resetUserData = async function () {
     let allMetadataObjects = await databaseService.getObjectsRaw(MetaData);
     let deleteMetadata = allMetadataObjects.filter(metadataObject => metadataObject.id !== currentMetadata.id);
     let allDeleteObjects = deleteGrids.concat(deleteDics).concat(deleteMetadata);
-    await databaseService.bulkDelete(allDeleteObjects);
+
+    // also get info for all conflicts to also delete them
+    // otherwise they will become alive again, after deleting the current winning doc
+    let conflictDocs = [];
+    for (let deleteObject of allDeleteObjects) {
+        let conflictRevs = deleteObject._conflicts || [];
+        let docs = conflictRevs.map(rev => {
+            return {id: deleteObject.id, _id: deleteObject.id, _rev: rev}
+        });
+        conflictDocs = conflictDocs.concat(docs);
+    }
+
+    await databaseService.bulkDelete(allDeleteObjects.concat(conflictDocs));
     localStorageService.saveUserSettings({originGridsetFilename: '', isEmpty: true}, localStorageService.getAutologinUser());
     return saveGlobalGridId('');
 }

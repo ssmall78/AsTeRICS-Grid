@@ -70,6 +70,8 @@ databaseService.getSingleObject = function (objectType, id, onlyShortVersion) {
 
 /**
  * returns all objects of a given object type as array, in raw format (encrypted).
+ * Conflicts are included, because they are needed for clean deletion.
+ *
  * @param objectType
  * @return {Promise<any[]|[*]|[]|*[]>}
  */
@@ -77,7 +79,7 @@ databaseService.getObjectsRaw = async function (objectType = {}) {
     if (!objectType.getIdPrefix) {
         return [];
     }
-    return await pouchDbService.allAsArray(objectType.getIdPrefix());
+    return await pouchDbService.allAsArray(objectType.getIdPrefix(), null, {includeConflicts: true});
 }
 
 /**
