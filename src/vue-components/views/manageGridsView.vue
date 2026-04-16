@@ -362,12 +362,11 @@
                 let id = this.selectedGraphElement ? this.selectedGraphElement.grid.id : null;
                 this.reload(id);
             },
-            deleteAll() {
-                if (confirm(i18nService.t('doYouReallyWantDeleteAllGrids'))) {
+            async resetData() {
+                if (confirm(i18nService.t('doYouReallyWantToResetConfig'))) {
                     this.showLoading = true;
-                    dataService.deleteAllGrids().then(() => {
-                        this.reload();
-                    });
+                    await dataService.resetUserData();
+                    this.reload();
                 }
             },
             async deleteImages() {
@@ -725,7 +724,7 @@
                     break;
                 }
                 case CONTEXT_RESET: {
-                    vueApp.deleteAll();
+                    vueApp.resetData();
                     break;
                 }
             }
