@@ -400,7 +400,7 @@ function changeHandler(changedIds, changedDocsEncrypted) {
         if (doc._deleted) {
             _documentCache.clearAll();
         } else {
-            _documentCache.set(doc.id, doc);
+            _documentCache.clear(doc.id);
             _documentCache.clear(MetaData.getIdPrefix());
             _documentCache.clear(GridData.getIdPrefix());
         }
