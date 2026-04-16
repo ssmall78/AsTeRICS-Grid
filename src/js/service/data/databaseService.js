@@ -205,8 +205,9 @@ databaseService.bulkDelete = function (objectList) {
  * @param id ID of the object to delete.
  * @return {Promise} promise that resolves if operation finished
  */
-databaseService.removeObject = function (id) {
-    return pouchDbService.remove(id);
+databaseService.removeObject = async function (id) {
+    let docsToDelete = await databaseService.getObjectsForDeletion(null, id);
+    return databaseService.bulkDelete(docsToDelete);
 };
 
 /**
