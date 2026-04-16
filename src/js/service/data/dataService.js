@@ -172,25 +172,14 @@ dataService.deleteGrid = function (gridId) {
  */
 dataService.resetUserData = async function () {
     $(document).trigger(constants.EVENT_CONFIG_RESET);
-    let deleteGrids = await databaseService.getObjectsRaw(GridData);
-    let deleteDics = await databaseService.getObjectsRaw(Dictionary);
+    let deleteGrids = await databaseService.getObjectsForDeletion(GridData);
+    let deleteDicts = await databaseService.getObjectsForDeletion(Dictionary);
     let currentMetadata = await dataService.getMetadata();
-    let allMetadataObjects = await databaseService.getObjectsRaw(MetaData);
+    let allMetadataObjects = await databaseService.getObjectsForDeletion(MetaData);
     let deleteMetadata = allMetadataObjects.filter(metadataObject => metadataObject.id !== currentMetadata.id);
-    let allDeleteObjects = deleteGrids.concat(deleteDics).concat(deleteMetadata);
+    let allDeleteObjects = deleteGrids.concat(deleteDicts).concat(deleteMetadata);
 
-    // also get info for all conflicts to also delete them
-    // otherwise they will become alive again, after deleting the current winning doc
-    let conflictDocs = [];
-    for (let deleteObject of allDeleteObjects) {
-        let conflictRevs = deleteObject._conflicts || [];
-        let docs = conflictRevs.map(rev => {
-            return {id: deleteObject.id, _id: deleteObject.id, _rev: rev}
-        });
-        conflictDocs = conflictDocs.concat(docs);
-    }
-
-    await databaseService.bulkDelete(allDeleteObjects.concat(conflictDocs));
+    await databaseService.bulkDelete(allDeleteObjects);
     localStorageService.saveUserSettings({originGridsetFilename: '', isEmpty: true}, localStorageService.getAutologinUser());
     return saveGlobalGridId('');
 }

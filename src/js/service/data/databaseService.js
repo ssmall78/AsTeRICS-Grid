@@ -69,17 +69,31 @@ databaseService.getSingleObject = function (objectType, id, onlyShortVersion) {
 };
 
 /**
- * returns all objects of a given object type as array, in raw format (encrypted).
- * Conflicts are included, because they are needed for clean deletion.
+ * returns all objects of a given object type or id as array, in raw format (encrypted).
+ * Conflicts are included, as separate documents without body like {id: 123, _id: 123, _rev: <conflict-rev>},
+ * because they are needed for clean deletion.
+ * Deleting all the returned docs with bulk delete results in a clean deletion of all instances of the document(s).
  *
  * @param objectType
+ * @param id
  * @return {Promise<any[]|[*]|[]|*[]>}
  */
-databaseService.getObjectsRaw = async function (objectType = {}) {
-    if (!objectType.getIdPrefix) {
-        return [];
+databaseService.getObjectsForDeletion = async function (objectType = null, id = null) {
+    let prefix = objectType && objectType.getIdPrefix ? objectType.getIdPrefix() : null;
+    let resultDocs = await pouchDbService.allAsArray(prefix, id, {includeConflicts: true});
+
+    // also get info for all conflicts to also delete them
+    // otherwise they will become alive again, after deleting the current winning doc
+    let conflictDocs = [];
+    for (let deleteObject of resultDocs) {
+        let conflictRevs = deleteObject._conflicts || [];
+        let docs = conflictRevs.map(rev => {
+            return {id: deleteObject.id, _id: deleteObject.id, _rev: rev};
+        });
+        conflictDocs = conflictDocs.concat(docs);
     }
-    return await pouchDbService.allAsArray(objectType.getIdPrefix(), null, {includeConflicts: true});
+
+    return resultDocs.concat(conflictDocs);
 }
 
 /**
