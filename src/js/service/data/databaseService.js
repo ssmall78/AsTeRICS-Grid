@@ -69,6 +69,18 @@ databaseService.getSingleObject = function (objectType, id, onlyShortVersion) {
 };
 
 /**
+ * returns all objects of a given object type as array, in raw format (encrypted).
+ * @param objectType
+ * @return {Promise<any[]|[*]|[]|*[]>}
+ */
+databaseService.getObjectsRaw = async function (objectType = {}) {
+    if (!objectType.getIdPrefix) {
+        return [];
+    }
+    return await pouchDbService.allAsArray(objectType.getIdPrefix());
+}
+
+/**
  * Saves an object to database.
  *
  * @param objectType the objectType to save, e.g. "GridData"
@@ -157,7 +169,7 @@ databaseService.bulkSave = function (objectList) {
 /**
  * deletes a list of objects/documents in one action
  * @param objectList
- * @return {Promise<never>}
+ * @return {Promise<void>}
  */
 databaseService.bulkDelete = function (objectList) {
     if (!objectList || objectList.length === 0) {
