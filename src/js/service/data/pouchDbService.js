@@ -108,6 +108,20 @@ pouchDbService.all = function (idPrefix, id) {
 };
 
 /**
+ * returns one or more documents as array, same as .all(), but result is guaranteed to be an array
+ * @param idPrefix
+ * @param id
+ * @return {Promise<any[]|*[]|*[]>}
+ */
+pouchDbService.allAsArray = async function (idPrefix, id = null) {
+    let result = await pouchDbService.all(idPrefix, id);
+    if (Array.isArray(result)) {
+        return result;
+    }
+    return result ? [result] : [];
+}
+
+/**
  * returns all docs that are stored in pouchDb, can be limited by parameters, always returns Array
  * @param idPrefix (optional) only return docs where IDs have the given prefix
  * @param id (optional) only return doc with this ID
