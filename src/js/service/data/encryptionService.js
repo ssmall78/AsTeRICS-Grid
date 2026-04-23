@@ -210,13 +210,12 @@ encryptionService.getUserPasswordHash = function (plaintextPassword) {
  */
 encryptionService.setEncryptionProperties = function (hashedPassword, salts, isLocalUser) {
     let saltUsernameOriginalCase = localStorageService.getAutologinOrActiveUser();
-    let saltUsernameFirstUpper = saltUsernameOriginalCase[0].toUpperCase() + saltUsernameOriginalCase.slice(1);
     _saltUsername = saltUsernameOriginalCase.toLowerCase();
     let fallbackSalts = getFallbackSalts();
     hashedPassword = hashedPassword || '';
     _encryptionBasePassword = hashedPassword;
     _encryptionSalts = Array.isArray(salts) ? salts : [salts];
-    _encryptionSalts = [saltUsernameOriginalCase, saltUsernameFirstUpper].concat(_encryptionSalts);
+    _encryptionSalts = [saltUsernameOriginalCase].concat(_encryptionSalts);
     _encryptionSalts = _encryptionSalts.concat(fallbackSalts);
     _encryptionSalts = _encryptionSalts.filter(e => !!e);
     _isLocalUser = isLocalUser;
