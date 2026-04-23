@@ -64,7 +64,7 @@
                             </div>
                             <div class="srow">
                                 <label for="inputUser" class="two columns"><span>{{ $t('username') }}</span></label>
-                                <input type="text" name="username" v-model="user" id="inputUser" class="four columns" autocomplete="username" @input="user = user.toLowerCase()"/>
+                                <input type="text" name="username" v-model="user" id="inputUser" class="four columns" autocomplete="username"/>
                                 <button type="button" v-if="savedUsers.includes(user) && hasValidMajorModelVersion(user)" class="four columns" @click="loginStored(user)">
                                     <span>{{ $t('open') }}</span> <i class="fas fa-sign-in-alt"></i>
                                 </button>
@@ -94,7 +94,7 @@
                     <form autocomplete="on" onsubmit="event.preventDefault()">
                         <div class="srow">
                             <label for="inputUser2" class="one column"><span class="desktop-right">{{ $t('username') }}</span></label>
-                            <input type="text" name="username" v-model="user" id="inputUser2" class="four columns" autocomplete="username" @input="user = user.toLowerCase()"/>
+                            <input type="text" name="username" v-model="user" id="inputUser2" class="four columns" autocomplete="username"/>
                         </div>
                         <div class="srow">
                             <label for="inputPassword2" class="one column"><span class="desktop-right">{{ $t('password') }}</span></label>

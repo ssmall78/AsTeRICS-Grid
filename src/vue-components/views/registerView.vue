@@ -160,7 +160,6 @@
             },
             validateUsername() {
                 var thiz = this;
-                thiz.user = (thiz.user || '').toLowerCase();
                 thiz.usernameValid = undefined;
                 thiz.usernameValidationCode = null;
                 util.debounce(() => {
