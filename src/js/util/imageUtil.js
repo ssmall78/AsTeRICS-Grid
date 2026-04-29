@@ -33,7 +33,8 @@ imageUtil.getBase64FromImg = function (img, maxWidth, quality, mimeType) {
             dim: getDimObject(canvas.width, canvas.height)
         };
     } catch (e) {
-        throw 'image converting failed!';
+        console.warn('image converting failed!', e);
+        return null;
     }
 };
 
