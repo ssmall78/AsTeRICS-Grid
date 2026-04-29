@@ -184,24 +184,29 @@
                     });
                 }
             },
-            setBase64(base64) {
+            async setBase64(base64) {
                 if (!base64) {
                     return;
                 }
-                let thiz = this;
-                if (base64.length > 50 * 1024) {
-                    imageUtil.convertBase64(base64, 2 * thiz.elementW).then(newData => {
-                        if (newData.length < base64.length) {
-                            log.info(`converted image from ${Math.round(base64.length / 1024)}kB to ${Math.round(newData.length / 1024)}kB`);
-                            thiz.gridElement.image.data = newData;
-                        } else {
-                            log.info(`converting resulted in bigger image (${Math.round(newData.length / 1024)}kB), using old image with ${Math.round(base64.length / 1024)}kB`);
-                            thiz.gridElement.image.data = base64;
-                        }
-                    })
+                let originalKb = Math.round(base64.length / 1024);
+                if (originalKb > constants.MAX_BASE64_IMAGE_SIZE_KB) {
+                    try {
+                      let maxWidth = Math.max(2 * this.elementW, 200);
+                      let compressed = await imageUtil.compressToSize(base64, maxWidth, constants.MAX_BASE64_IMAGE_SIZE_KB);
+                      if (compressed && compressed.length < base64.length) {
+                        log.info(`compressed image from ${originalKb}kB to ${Math.round(compressed.length / 1024)}kB`);
+                        this.gridElement.image.data = compressed;
+                      } else {
+                        log.info(`converting not reduced size (now ${Math.round(compressed.length / 1024)}kB), using old image with ${originalKb}kB`);
+                        this.gridElement.image.data = base64;
+                      }
+                    } catch(e) {
+                      log.warn(`couldn't compress image below ${constants.MAX_BASE64_IMAGE_SIZE_KB}kB!`);
+                      this.clearImage();
+                    }
                 } else {
-                    log.debug(`image size is ${Math.round(base64.length / 1024)}kB`);
-                    thiz.gridElement.image.data = base64;
+                    log.info(`image size is ${Math.round(base64.length / 1024)}kB`);
+                    this.gridElement.image.data = base64;
                 }
             },
             clearImage() {
