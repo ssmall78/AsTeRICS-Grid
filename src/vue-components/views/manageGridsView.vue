@@ -264,12 +264,7 @@
             exportCustom(gridId) {
                 if (gridId) {
                     this.backupModal.exportOptions.gridId = gridId;
-                    this.backupModal.exportOptions.exportDictionaries = false;
-                    this.backupModal.exportOptions.exportUserSettings = false;
-                    this.backupModal.exportOptions.exportGlobalGrid = false;
-                } else {
-                    this.backupModal.exportOptions = {}
-                }
+                } 
                 this.backupModal.show = true;
             },
             exportToPdf(gridId) {
