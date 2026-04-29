@@ -7,23 +7,24 @@ var imageUtil = {};
  * @param img the image element to convert
  * @param maxWidth maximum width of the image
  * @param quality quality of the image (0.0 - 1.0)
+ * @param mimeType the mime type to use for output
  * @return {Object} object containing "data" base64 data of image, "dim" containing width, height and ratio
  */
 imageUtil.getBase64FromImg = function (img, maxWidth, quality, mimeType) {
     maxWidth = maxWidth || 150;
-    mimeType = mimeType || img.src.indexOf('data:') === 0 ? img.src.substring(5, img.src.indexOf(';')) : null;
-    mimeType = mimeType || (img.src.indexOf('.png') > -1 ? 'image/png' : null);
-    mimeType = mimeType || (img.src.indexOf('.svg') > -1 ? 'image/svg+xml' : null);
-    mimeType = mimeType || 'image/jpeg';
+    mimeType = mimeType || imageUtil.getMimeTypeFromBase64(img.src);
+    mimeType = mimeType || (img.src.indexOf('.png') > -1 ? constants.MIME_TYPE_PNG : null);
+    mimeType = mimeType || (img.src.indexOf('.svg') > -1 ? constants.MIME_TYPE_SVG : null);
+    mimeType = mimeType || constants.MIME_TYPE_JPEG;
 
-    var canvas = document.createElement('canvas');
-    var factor = 1;
+    let canvas = document.createElement('canvas');
+    let factor = 1;
     if (img.width > maxWidth) {
         factor = maxWidth / img.width;
     }
     canvas.width = img.width * factor;
     canvas.height = img.height * factor;
-    var ctx = canvas.getContext('2d');
+    let ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     try {
         let data = canvas.toDataURL(mimeType, quality);
