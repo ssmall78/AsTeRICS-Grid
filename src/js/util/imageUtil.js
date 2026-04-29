@@ -39,6 +39,69 @@ imageUtil.getBase64FromImg = function (img, maxWidth, quality, mimeType) {
 };
 
 /**
+ * compresses a given base64 image to a target size
+ * @param originalBase64
+ * @param maxWidth max width of the image in pixels
+ * @param maxSizeKB max size of the resulting base64 string in kB
+ * @param initialQuality
+ * @return {Promise<unknown>} promise which resolves in a compressed base64 image string. if compression not successful
+ *                            the promise is rejected
+ */
+imageUtil.compressToSize = async function (originalBase64, maxWidth = 150, maxSizeKB = 300, initialQuality = 0.9) {
+    let maxSizeBytes = maxSizeKB * 1024;
+    if (!originalBase64) {
+        return Promise.reject();
+    }
+
+    // SVG check (SVG quality cannot be reduced via canvas)
+    if (imageUtil.getMimeTypeFromBase64(originalBase64) === constants.MIME_TYPE_SVG) {
+        if (originalBase64.length < maxSizeBytes) {
+            return originalBase64;
+        } else {
+            // if svg is too big, convert it to png and then try to compress the png
+            originalBase64 = await imageUtil.base64SvgToBase64Jpeg(originalBase64, maxWidth);
+        }
+    }
+
+    return new Promise((resolve, reject) => {
+        let quality = initialQuality || 0.9;
+        let img = document.createElement('img');
+        img.onload = function () {
+            try {
+                let resultData = null;
+                let currentSizeBytes = Infinity;
+
+                // Iterative reduction loop
+                while (currentSizeBytes > maxSizeBytes && quality > 0.01) {
+                    let result = imageUtil.getBase64FromImg(img, maxWidth, quality, constants.MIME_TYPE_JPEG)
+                    if (!result || !result.data) {
+                        break;
+                    }
+                    resultData = result.data;
+                    currentSizeBytes = resultData.length;
+                    if (currentSizeBytes <= maxSizeBytes) {
+                        break;
+                    }
+                    quality -= 0.05;
+                }
+                if (resultData && resultData.length > maxSizeBytes) {
+                    return reject();
+                }
+                return resolve(resultData);
+            } catch (e) {
+                console.error("Compression error:", e);
+                return reject();
+            }
+        };
+
+        img.onerror = function () {
+            return reject();
+        };
+        img.src = originalBase64;
+    });
+};
+
+/**
  * returns the correct file suffix for a given data string
  * @param dataString
  * @return {string}
