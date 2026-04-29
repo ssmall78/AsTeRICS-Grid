@@ -182,8 +182,6 @@
                     } else {
                       console.warn("Unsupported file type dropped:", file.type);
                     }
-                    $('#inputImg')[0].files = event.dataTransfer.files;
-                    this.changedImg();
                 } else {
                     let url = event.dataTransfer.getData('URL');
                     imageUtil.urlToBase64(url).then(resultBase64 => {
