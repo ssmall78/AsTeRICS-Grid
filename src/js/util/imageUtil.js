@@ -69,6 +69,25 @@ imageUtil.mimeTypeToFileSuffix = function getImageExtension(mimeType) {
 }
 
 /**
+ * returns the mime type for a given base64 image
+ * @param base64Image
+ * @return {string|null} mime type like e.g. "image/png" or null if no valid base64 was given
+ */
+imageUtil.getMimeTypeFromBase64 = function (base64Image) {
+    let dataPrefix = 'data:';
+    if (typeof base64Image !== 'string' || !base64Image.startsWith(dataPrefix)) {
+        return null;
+    }
+
+    const semicolonIndex = base64Image.indexOf(';');
+    if (semicolonIndex === -1) {
+        return null;
+    }
+
+    return base64Image.substring(dataPrefix.length, semicolonIndex);
+};
+
+/**
  * returns promise that resolves to a base64 string that represents the content of the file
  * @param input the imput element to read the file from
  * @return {Promise}
