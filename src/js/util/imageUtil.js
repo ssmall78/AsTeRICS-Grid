@@ -130,13 +130,15 @@ imageUtil.convertBase64 = function (originalBase64, maxWidth, quality) {
 };
 
 /**
- * converts a base64 encoded data url SVG image to a PNG image
+ * converts a base64 encoded data url SVG image to a base64 image
  * @param originalBase64 data url of svg image
- * @param width target width in pixel of PNG image
+ * @param width target width in pixel of output image
+ * @param targetMimeType target mime type of the conversion
+ * @param whiteBg use white background instead of transparent one?
  * @param secondTry used internally to prevent endless recursion
  * @return {Promise<unknown>} resolves to png data url of the image
  */
-imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
+imageUtil.convertBase64Svg = function (originalBase64, width = 300, targetMimeType = "image/png", whiteBg = false, secondTry = false) {
     if (!originalBase64) {
         return Promise.resolve(null);
     }
@@ -146,7 +148,7 @@ imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
             if (!secondTry && (img.naturalWidth === 0 || img.naturalHeight === 0)) {
                 let svgDoc = base64ToSvgDocument(originalBase64);
                 let fixedDoc = fixSvgDocumentFF(svgDoc);
-                return imageUtil.base64SvgToBase64Png(svgDocumentToBase64(fixedDoc), width, true).then((result) => {
+                return imageUtil.convertBase64Svg(svgDocumentToBase64(fixedDoc), width, targetMimeType, whiteBg, true).then((result) => {
                     resolve(result);
                 });
             }
@@ -156,9 +158,13 @@ imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
             canvas.width = width;
             canvas.height = width / ratio;
             let ctx = canvas.getContext('2d');
+            if (whiteBg) {
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             try {
-                let data = canvas.toDataURL('image/png');
+                let data = canvas.toDataURL(targetMimeType);
                 resolve(data);
             } catch (e) {
                 resolve(null);
@@ -167,6 +173,14 @@ imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
         img.src = originalBase64;
     });
 };
+
+imageUtil.base64SvgToBase64Png = function(originalBase64, width) {
+    return imageUtil.convertBase64Svg(originalBase64, width, constants.MIME_TYPE_PNG);
+}
+
+imageUtil.base64SvgToBase64Jpeg = function(originalBase64, width) {
+    return imageUtil.convertBase64Svg(originalBase64, width, constants.MIME_TYPE_JPEG, true);
+}
 
 /**
  * converts a given url to a base64 data and also returns image dimensions
