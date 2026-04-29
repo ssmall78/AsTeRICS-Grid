@@ -3,7 +3,7 @@
         <div class="srow">
             <label for="inputImg" class="two columns">{{ $t('image') }}</label>
             <button onclick="document.getElementById('inputImg').click();" class="three columns file-input">
-                <input type="file" class="five columns" id="inputImg" @change="changedImg" accept="image/*"/>
+                <input type="file" class="five columns" id="inputImg" @change="changedImg" accept="image/png, image/jpeg, image/webp, image/svg+xml, image/gif"/>
                 <span><i class="fas fa-file-upload"/> <span>{{ $t('chooseFile') }}</span></span>
             </button>
             <button class="three columns" @click="searchText = gridElement.label[i18nService.getContentLang()]; searchInput(0);">
@@ -175,12 +175,24 @@
                 event.preventDefault();
                 this.clearImage();
                 if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+                    let file = event.dataTransfer.files[0];
+                    if (constants.ALLOWED_IMG_MIME_TYPES.includes(file.type)) {
+                      $('#inputImg')[0].files = event.dataTransfer.files;
+                      this.changedImg();
+                    } else {
+                      console.warn("Unsupported file type dropped:", file.type);
+                    }
                     $('#inputImg')[0].files = event.dataTransfer.files;
                     this.changedImg();
                 } else {
                     let url = event.dataTransfer.getData('URL');
                     imageUtil.urlToBase64(url).then(resultBase64 => {
-                        thiz.setBase64(resultBase64);
+                        let mimeType = imageUtil.getMimeTypeFromBase64(resultBase64);
+                        if (constants.ALLOWED_IMG_MIME_TYPES.includes(mimeType)) {
+                          thiz.setBase64(resultBase64);
+                        } else {
+                          console.warn("Unsupported image type from URL:", mimeType);
+                        }
                     });
                 }
             },

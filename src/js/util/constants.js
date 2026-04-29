@@ -115,7 +115,8 @@ constants.MIME_TYPE_PNG = 'image/png';
 constants.MIME_TYPE_JPEG = 'image/jpeg';
 constants.MIME_TYPE_SVG = 'image/svg+xml';
 constants.MIME_TYPE_WEBP = 'image/webp';
-constants.ALLOWED_IMG_MIME_TYPES = [constants.MIME_TYPE_PNG, constants.MIME_TYPE_JPEG, constants.MIME_TYPE_SVG, constants.MIME_TYPE_WEBP];
+constants.MIME_TYPE_GIF = 'image/gif';
+constants.ALLOWED_IMG_MIME_TYPES = [constants.MIME_TYPE_PNG, constants.MIME_TYPE_JPEG, constants.MIME_TYPE_SVG, constants.MIME_TYPE_WEBP, constants.MIME_TYPE_GIF];
 
 constants.COLORS = {
     WHITE: '#ffffff',
