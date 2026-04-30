@@ -215,10 +215,10 @@
                       let compressed = await imageUtil.compressToSize(base64, maxWidth, constants.MAX_BASE64_IMAGE_SIZE_KB);
                       if (compressed && compressed.length < base64.length) {
                         log.info(`compressed image from ${originalKb}kB to ${Math.round(compressed.length / 1024)}kB`);
-                        this.gridElement.image.data = compressed;
+                        this.setValidatedBase64(compressed);
                       } else {
                         log.info(`converting not reduced size (now ${Math.round(compressed.length / 1024)}kB), using old image with ${originalKb}kB`);
-                        this.gridElement.image.data = base64;
+                        this.setValidatedBase64(base64);
                       }
                     } catch(e) {
                       log.warn(`couldn't compress image below ${constants.MAX_BASE64_IMAGE_SIZE_KB}kB!`);
@@ -226,8 +226,12 @@
                     }
                 } else {
                     log.info(`image size is ${Math.round(base64.length / 1024)}kB`);
-                    this.gridElement.image.data = base64;
+                    this.setValidatedBase64(base64);
                 }
+            },
+            setValidatedBase64(base64) {
+                this.clearImage();
+                this.gridElement.image.data = base64;
             },
             clearImage() {
                 this.gridElement.image = JSON.parse(JSON.stringify(new GridImage()));
