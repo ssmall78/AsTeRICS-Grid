@@ -84,6 +84,8 @@
     import { liveElementService } from '../../js/service/liveElementService';
     import TransferPropsModal from '../modals/transferPropsModal.vue';
     import { GridElementMatrixConversation } from '../../js/model/GridElementMatrixConversation';
+    import {imageUtil} from "../../js/util/imageUtil";
+    import {GridImage} from "../../js/model/GridImage";
 
     let vueApp = null;
 
@@ -450,10 +452,23 @@
             },
             async pasteElements(elements = null) {
                 this.unmarkAll();
-                elements = elements || await util.getGridElementsFromClipboard();
+                elements = elements || (await util.getGridElementsFromClipboard()) || [];
                 if (!elements.length) {
-                    return;
-                } else if (elements.length === 1) {
+                    // see if there is some image in the clipboard and add element containing the image
+                    let base64 = await util.getClipboardImageAsBase64();
+                    try {
+                        let compressed = await imageUtil.compressToSize(base64, 300);
+                        if (compressed) {
+                            let element = new GridElement({image: new GridImage({data: compressed})});
+                            elements.push(JSON.parse(JSON.stringify(element)));
+                        }
+                    } catch (e) {
+                    }
+                }
+                if (!elements || !elements.length) {
+                   return;
+                }
+                if (elements.length === 1) {
                     let element = elements[0];
                     element.width = 1;
                     element.height = 1;
