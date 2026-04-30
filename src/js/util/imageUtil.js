@@ -47,7 +47,8 @@ imageUtil.getBase64FromImg = function (img, maxWidth, quality, mimeType) {
  * @return {Promise<unknown>} promise which resolves in a compressed base64 image string. if compression not successful
  *                            the promise is rejected
  */
-imageUtil.compressToSize = async function (originalBase64, maxWidth = 150, maxSizeKB = 300, initialQuality = 0.9) {
+imageUtil.compressToSize = async function (originalBase64, maxWidth = 150, maxSizeKB = null, initialQuality = 0.9) {
+    maxSizeKB = maxSizeKB || constants.MAX_BASE64_IMAGE_SIZE_KB;
     let maxSizeBytes = maxSizeKB * 1024;
     if (!originalBase64) {
         return Promise.reject();
@@ -87,7 +88,8 @@ imageUtil.compressToSize = async function (originalBase64, maxWidth = 150, maxSi
                 if (resultData && resultData.length > maxSizeBytes) {
                     return reject();
                 }
-                return resolve(resultData);
+                let final = resultData && resultData.length < originalBase64.length ? resultData : originalBase64;
+                return resolve(final);
             } catch (e) {
                 console.error("Compression error:", e);
                 return reject();
