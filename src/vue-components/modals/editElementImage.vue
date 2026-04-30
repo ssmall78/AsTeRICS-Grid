@@ -12,17 +12,23 @@
             </button>
             <button class="three columns" v-show="hasImage" @click="clearImage"><i class="fas fa-times"/> <span>{{ $t('clearImage') }}</span></button>
         </div>
-        <div class="srow">
-            <div class="img-preview offset-by-two four columns">
-                <span class="show-mobile" v-show="!hasImage"><i class="fas fa-image"/> <span>{{ $t('noImageChosen') }}</span></span>
-                <span class="hide-mobile" v-show="!hasImage"><i class="fas fa-arrow-down"/> <span>{{ $t('dropImageHere') }}</span></span>
+        <div class="srow d-flex align-items-center">
+            <div class="offset-by-two five columns">
+                <div class="drop-placeholder" v-show="!hasImage">
+                    <span class="show-mobile"><i class="fas fa-image"/> <span>{{ $t('noImageChosen') }}</span></span>
+                    <span class="hide-mobile"><i class="fas fa-arrow-down"/> <span>{{ $t('dropImageHere') }}</span></span>
+                    <button @click="pasteImage()" :title="$t('pasteFromClipboard')" class="paste-btn"><i class="far fa-clipboard"/></button>
+                </div>
                 <img v-if="hasImage" id="imgPreview" :src="gridElement.image.data || gridElement.image.url"/>
                 <div v-if="gridElement.image.author">
                     {{ $t('by') }} <a :href="gridElement.image.authorURL" target="_blank">{{gridElement.image.author}}</a>
                 </div>
             </div>
-            <div class="img-preview five columns hide-mobile" v-show="hasImage" style="margin-top: 50px;">
-                <span><i class="fas fa-arrow-down"/> <span>{{ $t('dropNewImageHere') }}</span></span>
+            <div class="four columns hide-mobile" v-show="hasImage">
+                <div class="drop-placeholder">
+                  <span><i class="fas fa-arrow-down"/> <span>{{ $t('dropNewImageHere') }}</span></span>
+                  <button @click="pasteImage()" :title="$t('pasteFromClipboard')" class="paste-btn"><i class="far fa-clipboard"/></button>
+                </div>
             </div>
         </div>
         <div class="srow">
@@ -170,6 +176,10 @@
                     thiz.setBase64(base64);
                 });
             },
+            async pasteImage() {
+                let base64 = await util.getClipboardImageAsBase64();
+                this.setBase64(base64);
+            },
             imageDropped(event) {
                 let thiz = this;
                 event.preventDefault();
@@ -302,10 +312,19 @@
 </script>
 
 <style scoped>
-    .img-preview > span {
+    .drop-placeholder {
         border: 1px solid lightgray;
-        padding: 0.3em;
-        width: 150px;
+        padding: 1em;
+        margin-top: 2.5em;
+        margin-bottom: 2.5em;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+    }
+
+    .paste-btn {
+      padding: 0 0.25em;
+      margin-bottom: 0;
     }
 
     #imgPreview {
