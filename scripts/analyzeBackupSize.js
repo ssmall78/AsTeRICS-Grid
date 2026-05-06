@@ -6,8 +6,12 @@ const sharp = require('sharp');
 const FILE_PATH = process.argv[2];
 const SHOULD_COMPRESS = process.argv.includes('--compress');
 const SHOULD_DELETE_DICTS = process.argv.includes('--delete-dicts');
-const MAX_SIZE_BYTES = 300 * 1024; // 300KB Target
+const MAX_SIZE_BYTES = 200 * 1024; // 200KB Target
+const COUNT_SIZE_BYTES = 50 * 1024;
 const TARGET_WIDTH = 1200; // Reasonable max width for quality
+
+let countBigImages = 0;
+let countImages = 0;
 
 function formatSize(bytes) {
     if (bytes < 1024) return `${bytes} B`;
@@ -90,6 +94,11 @@ async function run() {
                             size: originalSize
                         });
 
+                        countImages++;
+                        if (originalSize > COUNT_SIZE_BYTES) {
+                            countBigImages++;
+                        }
+
                         // 3. Compression Logic (Only if flag present and image > 300KB)
                         if (SHOULD_COMPRESS && originalSize > MAX_SIZE_BYTES) {
                             const mimeType = parts[0].split(':')[1] || 'image/jpeg';
@@ -110,7 +119,10 @@ async function run() {
             "Total JSON File Size": formatSize(totalJsonLength),
             "Total Image Data": formatSize(stats.imageSize),
             "Total Dictionary Data": formatSize(stats.dictSize),
-            "Structural/Meta Overhead": formatSize(totalJsonLength - (stats.imageSize + stats.dictSize))
+            "Structural/Meta Overhead": formatSize(totalJsonLength - (stats.imageSize + stats.dictSize)),
+            "Images bigger than 50KB": countBigImages,
+            "Total images": countImages,
+            "Average kB/image": Math.round(stats.imageSize / (countImages * 1024))
         });
 
         const top5 = stats.imageTracker.sort((a, b) => b.size - a.size).slice(0, 5);
