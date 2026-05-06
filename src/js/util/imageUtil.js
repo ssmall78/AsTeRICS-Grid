@@ -7,23 +7,24 @@ var imageUtil = {};
  * @param img the image element to convert
  * @param maxWidth maximum width of the image
  * @param quality quality of the image (0.0 - 1.0)
+ * @param mimeType the mime type to use for output
  * @return {Object} object containing "data" base64 data of image, "dim" containing width, height and ratio
  */
 imageUtil.getBase64FromImg = function (img, maxWidth, quality, mimeType) {
     maxWidth = maxWidth || 150;
-    mimeType = mimeType || img.src.indexOf('data:') === 0 ? img.src.substring(5, img.src.indexOf(';')) : null;
-    mimeType = mimeType || (img.src.indexOf('.png') > -1 ? 'image/png' : null);
-    mimeType = mimeType || (img.src.indexOf('.svg') > -1 ? 'image/svg+xml' : null);
-    mimeType = mimeType || 'image/jpeg';
+    mimeType = mimeType || imageUtil.getMimeTypeFromBase64(img.src);
+    mimeType = mimeType || (img.src.indexOf('.png') > -1 ? constants.MIME_TYPE_PNG : null);
+    mimeType = mimeType || (img.src.indexOf('.svg') > -1 ? constants.MIME_TYPE_SVG : null);
+    mimeType = mimeType || constants.MIME_TYPE_JPEG;
 
-    var canvas = document.createElement('canvas');
-    var factor = 1;
+    let canvas = document.createElement('canvas');
+    let factor = 1;
     if (img.width > maxWidth) {
         factor = maxWidth / img.width;
     }
     canvas.width = img.width * factor;
     canvas.height = img.height * factor;
-    var ctx = canvas.getContext('2d');
+    let ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     try {
         let data = canvas.toDataURL(mimeType, quality);
@@ -32,8 +33,74 @@ imageUtil.getBase64FromImg = function (img, maxWidth, quality, mimeType) {
             dim: getDimObject(canvas.width, canvas.height)
         };
     } catch (e) {
-        throw 'image converting failed!';
+        console.warn('image converting failed!', e);
+        return null;
     }
+};
+
+/**
+ * compresses a given base64 image to a target size
+ * @param originalBase64
+ * @param maxWidth max width of the image in pixels
+ * @param maxSizeKB max size of the resulting base64 string in kB
+ * @param initialQuality
+ * @return {Promise<unknown>} promise which resolves in a compressed base64 image string. if compression not successful
+ *                            the promise is rejected
+ */
+imageUtil.compressToSize = async function (originalBase64, maxWidth = 150, maxSizeKB = null, initialQuality = 0.9) {
+    maxSizeKB = maxSizeKB || constants.MAX_BASE64_IMAGE_SIZE_KB;
+    let maxSizeBytes = maxSizeKB * 1024;
+    if (!originalBase64) {
+        return Promise.reject();
+    }
+
+    // SVG check (SVG quality cannot be reduced via canvas)
+    if (imageUtil.getMimeTypeFromBase64(originalBase64) === constants.MIME_TYPE_SVG) {
+        if (originalBase64.length < maxSizeBytes) {
+            return originalBase64;
+        } else {
+            // if svg is too big, convert it to png and then try to compress the png
+            originalBase64 = await imageUtil.base64SvgToBase64Jpeg(originalBase64, maxWidth);
+        }
+    }
+
+    return new Promise((resolve, reject) => {
+        let quality = initialQuality || 0.9;
+        let img = document.createElement('img');
+        img.onload = function () {
+            try {
+                let resultData = null;
+                let currentSizeBytes = Infinity;
+
+                // Iterative reduction loop
+                while (currentSizeBytes > maxSizeBytes && quality > 0.01) {
+                    let result = imageUtil.getBase64FromImg(img, maxWidth, quality, constants.MIME_TYPE_JPEG)
+                    if (!result || !result.data) {
+                        break;
+                    }
+                    resultData = result.data;
+                    currentSizeBytes = resultData.length;
+                    if (currentSizeBytes <= maxSizeBytes) {
+                        break;
+                    }
+                    quality -= 0.05;
+                }
+                if (resultData && resultData.length > maxSizeBytes) {
+                    return reject();
+                }
+                let final = resultData && resultData.length < originalBase64.length ? resultData : originalBase64;
+                return resolve(final);
+            } catch (e) {
+                console.error("Compression error:", e);
+                return reject();
+            }
+        };
+
+        img.onerror = function () {
+            return reject();
+        };
+        img.src = originalBase64;
+    });
 };
 
 /**
@@ -67,6 +134,25 @@ imageUtil.mimeTypeToFileSuffix = function getImageExtension(mimeType) {
 
     return mimeMap[mimeType] || '';
 }
+
+/**
+ * returns the mime type for a given base64 image
+ * @param base64Image
+ * @return {string|null} mime type like e.g. "image/png" or null if no valid base64 was given
+ */
+imageUtil.getMimeTypeFromBase64 = function (base64Image) {
+    let dataPrefix = 'data:';
+    if (typeof base64Image !== 'string' || !base64Image.startsWith(dataPrefix)) {
+        return null;
+    }
+
+    const semicolonIndex = base64Image.indexOf(';');
+    if (semicolonIndex === -1) {
+        return null;
+    }
+
+    return base64Image.substring(dataPrefix.length, semicolonIndex);
+};
 
 /**
  * returns promise that resolves to a base64 string that represents the content of the file
@@ -109,13 +195,15 @@ imageUtil.convertBase64 = function (originalBase64, maxWidth, quality) {
 };
 
 /**
- * converts a base64 encoded data url SVG image to a PNG image
+ * converts a base64 encoded data url SVG image to a base64 image
  * @param originalBase64 data url of svg image
- * @param width target width in pixel of PNG image
+ * @param width target width in pixel of output image
+ * @param targetMimeType target mime type of the conversion
+ * @param whiteBg use white background instead of transparent one?
  * @param secondTry used internally to prevent endless recursion
  * @return {Promise<unknown>} resolves to png data url of the image
  */
-imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
+imageUtil.convertBase64Svg = function (originalBase64, width = 300, targetMimeType = "image/png", whiteBg = false, secondTry = false) {
     if (!originalBase64) {
         return Promise.resolve(null);
     }
@@ -125,7 +213,7 @@ imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
             if (!secondTry && (img.naturalWidth === 0 || img.naturalHeight === 0)) {
                 let svgDoc = base64ToSvgDocument(originalBase64);
                 let fixedDoc = fixSvgDocumentFF(svgDoc);
-                return imageUtil.base64SvgToBase64Png(svgDocumentToBase64(fixedDoc), width, true).then((result) => {
+                return imageUtil.convertBase64Svg(svgDocumentToBase64(fixedDoc), width, targetMimeType, whiteBg, true).then((result) => {
                     resolve(result);
                 });
             }
@@ -135,9 +223,13 @@ imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
             canvas.width = width;
             canvas.height = width / ratio;
             let ctx = canvas.getContext('2d');
+            if (whiteBg) {
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             try {
-                let data = canvas.toDataURL('image/png');
+                let data = canvas.toDataURL(targetMimeType);
                 resolve(data);
             } catch (e) {
                 resolve(null);
@@ -146,6 +238,14 @@ imageUtil.base64SvgToBase64Png = function (originalBase64, width, secondTry) {
         img.src = originalBase64;
     });
 };
+
+imageUtil.base64SvgToBase64Png = function(originalBase64, width) {
+    return imageUtil.convertBase64Svg(originalBase64, width, constants.MIME_TYPE_PNG);
+}
+
+imageUtil.base64SvgToBase64Jpeg = function(originalBase64, width) {
+    return imageUtil.convertBase64Svg(originalBase64, width, constants.MIME_TYPE_JPEG, true);
+}
 
 /**
  * converts a given url to a base64 data and also returns image dimensions
