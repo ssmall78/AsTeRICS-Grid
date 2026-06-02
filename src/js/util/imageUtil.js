@@ -49,58 +49,93 @@ imageUtil.getBase64FromImg = function (img, maxWidth, quality, mimeType) {
  */
 imageUtil.compressToSize = async function (originalBase64, maxWidth = 150, maxSizeKB = null, initialQuality = 0.9) {
     maxSizeKB = maxSizeKB || constants.MAX_BASE64_IMAGE_SIZE_KB;
-    let maxSizeBytes = maxSizeKB * 1024;
+    const maxSizeBytes = maxSizeKB * 1024;
+
     if (!originalBase64) {
         return Promise.reject();
     }
+    if (originalBase64.length < maxSizeBytes) {
+        return originalBase64;
+    }
 
-    // SVG check (SVG quality cannot be reduced via canvas)
-    if (imageUtil.getMimeTypeFromBase64(originalBase64) === constants.MIME_TYPE_SVG) {
-        if (originalBase64.length < maxSizeBytes) {
-            return originalBase64;
-        } else {
-            // if svg is too big, convert it to png and then try to compress the png
-            originalBase64 = await imageUtil.base64SvgToBase64Jpeg(originalBase64, maxWidth);
-        }
+    let mimeType = imageUtil.getMimeTypeFromBase64(originalBase64);
+
+    if (mimeType === constants.MIME_TYPE_SVG) {
+        // if svg is too big, convert it to png and then try to compress the png
+        originalBase64 = await imageUtil.base64SvgToBase64Png(originalBase64, maxWidth);
+        mimeType = constants.MIME_TYPE_PNG;
     }
 
     return new Promise((resolve, reject) => {
-        let quality = initialQuality || 0.9;
-        let img = document.createElement('img');
+        const img = document.createElement('img');
         img.onload = function () {
             try {
-                let resultData = null;
-                let currentSizeBytes = Infinity;
+                const resultData = imageUtil.compressImg(img, mimeType, maxSizeBytes, maxWidth, initialQuality);
 
-                // Iterative reduction loop
-                while (currentSizeBytes > maxSizeBytes && quality > 0.01) {
-                    let result = imageUtil.getBase64FromImg(img, maxWidth, quality, constants.MIME_TYPE_JPEG)
-                    if (!result || !result.data) {
-                        break;
-                    }
-                    resultData = result.data;
-                    currentSizeBytes = resultData.length;
-                    if (currentSizeBytes <= maxSizeBytes) {
-                        break;
-                    }
-                    quality -= 0.05;
+                // Return the compressed version only if it actually ended up smaller than the original
+                const final = (resultData && resultData.length < originalBase64.length) ? resultData : originalBase64;
+
+                if (final.length > maxSizeBytes) {
+                    return reject(new Error("Image could not be compressed below the target size limit."));
                 }
-                if (resultData && resultData.length > maxSizeBytes) {
-                    return reject();
-                }
-                let final = resultData && resultData.length < originalBase64.length ? resultData : originalBase64;
+
                 return resolve(final);
             } catch (e) {
                 console.error("Compression error:", e);
-                return reject();
+                return reject(e);
             }
         };
 
         img.onerror = function () {
-            return reject();
+            return reject(new Error("Failed to load image source."));
         };
+
         img.src = originalBase64;
     });
+};
+
+/**
+ * compresses an image given as existing img element, handles both png and jpeg
+ * @param img
+ * @param mimeType
+ * @param maxSizeBytes
+ * @param maxWidth
+ * @param initialQuality
+ * @return the compressed base64 data
+ */
+imageUtil.compressImg = function (img, mimeType, maxSizeBytes, maxWidth, initialQuality) {
+    let resultData = null;
+    let currentSizeBytes = Infinity;
+    let quality = initialQuality || 0.9;
+    let currentWidth = maxWidth;
+
+    while (currentSizeBytes > maxSizeBytes) {
+        // Generate the base64 output dynamically using the format's current state
+        let result = imageUtil.getBase64FromImg(img, currentWidth, quality, mimeType);
+        if (!result || !result.data) {
+            break;
+        }
+
+        resultData = result.data;
+        currentSizeBytes = resultData.length;
+
+        // If target size is met, break immediately
+        if (currentSizeBytes <= maxSizeBytes) {
+            break;
+        }
+
+        // Apply format-specific reduction strategies
+        if (mimeType === constants.MIME_TYPE_JPEG) {
+            quality -= 0.05;
+            if (quality <= 0.01) break;
+        } else {
+            // PNG ignores quality; we must step down dimensions by 15% each iteration
+            currentWidth = Math.floor(currentWidth * 0.85);
+            if (currentWidth < 20) break;
+        }
+    }
+
+    return resultData;
 };
 
 /**
