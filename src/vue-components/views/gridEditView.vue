@@ -86,6 +86,7 @@
     import { GridElementMatrixConversation } from '../../js/model/GridElementMatrixConversation';
     import {imageUtil} from "../../js/util/imageUtil";
     import {GridImage} from "../../js/model/GridImage";
+    import {GridActionPredict} from "../../js/model/GridActionPredict";
 
     let vueApp = null;
 
@@ -336,10 +337,13 @@
                         newElement.actions = [playPause];
                     } else if (type === GridElement.ELEMENT_TYPE_COLLECT) {
                         newElement = new GridElementCollect(baseProperties);
-                        let playText = new GridActionCollectElement({
+                        let playAction = new GridActionCollectElement({
                             action: GridActionCollectElement.COLLECT_ACTION_SPEAK
                         });
-                        newElement.actions = [playText];
+                        let predictAction = new GridActionPredict({
+                            suggestOnChange: true
+                        });
+                        newElement.actions = [playAction, predictAction];
                     } else if (type === GridElement.ELEMENT_TYPE_LIVE) {
                         newElement = new GridElementLive(baseProperties);
                         showEdit = true;
