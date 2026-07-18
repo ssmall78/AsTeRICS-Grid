@@ -19,6 +19,7 @@ import { databaseService } from './service/data/databaseService';
 import { localStorageService } from './service/data/localStorageService';
 import { MainVue } from './vue/mainVue';
 import HelpView from '../vue-components/views/helpView.vue';
+import PracticaView from '../vue-components/views/dime/practicaView.vue'; // DIME
 import { constants } from './util/constants.js';
 import { urlParamService } from './service/urlParamService';
 
@@ -122,6 +123,10 @@ Router.init = function (injectIdParam, initialHash) {
         help: function () {
             loadVueView(HelpView);
         },
+        practica: function () {
+            // DIME: speech practice module (see dime-app requirements/EARS.md PRX-*)
+            loadVueView(PracticaView);
+        },
         '*': function () {
             helpService.setHelpLocation('02_navigation', '#main-view');
             Router.toMain();
@@ -132,7 +137,8 @@ Router.init = function (injectIdParam, initialHash) {
             let hash = location.hash;
             $(document).trigger(constants.EVENT_NAVIGATE);
             let validForLocked =
-                !hash.startsWith('#grid/edit') && (hash.startsWith('#main') || hash.startsWith('#grid/'));
+                !hash.startsWith('#grid/edit') &&
+                (hash.startsWith('#main') || hash.startsWith('#grid/') || hash.startsWith('#practica')); // DIME: practice allowed in User Mode
             if (_locked && !validForLocked) {
                 done(constants.IS_SAFARI ? undefined : false);
                 if (constants.IS_SAFARI) {

@@ -16,6 +16,7 @@ let MatrixLib = null;
 
 let _messageCallback = null;
 let _roomChangeCallback = null;
+let _dimeMessageListener = null; // DIME: additive listener, independent of the conversation UI slot
 
 matrixService.getUsername = async function(full = false) {
     return matrixAdapter.getUsername(full);
@@ -46,6 +47,11 @@ matrixService.onMessage = function(callback) {
 
 matrixService.onRoomChange = function(callback) {
     _roomChangeCallback = callback;
+}
+
+// DIME: second message listener used by the alert escalation service (never cleared by UI components)
+matrixService.setDimeMessageListener = function(callback) {
+    _dimeMessageListener = callback;
 }
 
 matrixService.sendMessage = async function(roomId, message) {
@@ -170,6 +176,13 @@ async function timelineCallback(event, room, toStartOfTimeline) {
             console.log(`📩 New message: ${event.getContent().body}`);
             if (_messageCallback) {
                 _messageCallback(await matrixEventToMessage(event));
+            }
+            if (_dimeMessageListener) { // DIME
+                try {
+                    _dimeMessageListener(await matrixEventToMessage(event));
+                } catch (e) {
+                    console.warn('dime alert listener failed', e);
+                }
             }
             break;
 

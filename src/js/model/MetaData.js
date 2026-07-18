@@ -27,7 +27,8 @@ class MetaData extends Model({
     notificationConfig: [NotificationConfig],
     activateARASAACGrammarAPI: [Boolean],
     vocabularyLevel: [Number, null],
-    integrations: [Object] // IntegrationConfigSync
+    integrations: [Object], // IntegrationConfigSync
+    dimePractice: [Object] // DIME: synced speech-practice progress (EARS PRX-8/9); written by practiceSync.js
 }) {
     constructor(properties, elementToCopy) {
         properties = modelUtil.setDefaults(properties, elementToCopy, MetaData) || {};
